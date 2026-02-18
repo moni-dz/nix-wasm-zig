@@ -1,10 +1,9 @@
 const std = @import("std");
 const nix_wasm_zig = @import("nix_wasm_zig");
 
-const Value = nix_wasm_zig.Value;
-const Type = nix_wasm_zig.Type;
-const nixPanic = nix_wasm_zig.nixPanic;
-const nixWarn = nix_wasm_zig.nixWarn;
+const Nix = nix_wasm_zig.Nix;
+const Value = Nix.Value;
+const warn = nix_wasm_zig.warn;
 const wasm_allocator = std.heap.wasm_allocator;
 
 comptime {
@@ -12,14 +11,14 @@ comptime {
 }
 
 fn init() void {
-    nixWarn("strings wasm module");
+    warn("strings wasm module");
 }
 
 fn validateStringList(items: []const Value) void {
     for (items) |item| {
         switch (item.getType()) {
             .String => {},
-            else => nixPanic("Expected a list of strings"),
+            else => @panic("Expected a list of strings"),
         }
     }
 }
@@ -34,7 +33,7 @@ fn concatWithSeparator(allocator: std.mem.Allocator, sep: []const u8, strings: [
     }
 
     for (strings, 0..) |s, i| {
-        str_slices[i] = s.getString(allocator) catch nixPanic("failed to get string");
+        str_slices[i] = s.getString(allocator) catch @panic("failed to get string");
         total_len += str_slices[i].len;
     }
 
@@ -73,7 +72,7 @@ fn replaceStringsImpl(allocator: std.mem.Allocator, input: []const u8, from: []c
     }
 
     if (from.len != to.len) {
-        nixPanic("from and to lists must have the same length");
+        @panic("from and to lists must have the same length");
     }
 
     validateStringList(from);
@@ -87,7 +86,7 @@ fn replaceStringsImpl(allocator: std.mem.Allocator, input: []const u8, from: []c
     }
 
     for (from, 0..) |v, i| {
-        from_strs[i] = v.getString(allocator) catch nixPanic("failed to get string");
+        from_strs[i] = v.getString(allocator) catch @panic("failed to get string");
     }
 
     const to_strs = try allocator.alloc([]const u8, to.len);
@@ -98,7 +97,7 @@ fn replaceStringsImpl(allocator: std.mem.Allocator, input: []const u8, from: []c
     }
 
     for (to, 0..) |v, i| {
-        to_strs[i] = v.getString(allocator) catch nixPanic("failed to get string");
+        to_strs[i] = v.getString(allocator) catch @panic("failed to get string");
     }
 
     var result: std.ArrayListUnmanaged(u8) = .{};
@@ -162,15 +161,15 @@ export fn concatStringsSep(args: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const sep_val = args.getAttr("sep") orelse nixPanic("missing 'sep' argument");
-    const sep = sep_val.getString(allocator) catch nixPanic("failed to get sep string");
+    const sep_val = args.getAttr("sep") orelse @panic("missing 'sep' argument");
+    const sep = sep_val.getString(allocator) catch @panic("failed to get sep string");
 
-    const list_val = args.getAttr("list") orelse nixPanic("missing 'list' argument");
-    const list = list_val.getList(allocator) catch nixPanic("failed to get list");
+    const list_val = args.getAttr("list") orelse @panic("missing 'list' argument");
+    const list = list_val.getList(allocator) catch @panic("failed to get list");
 
     validateStringList(list);
 
-    return concatWithSeparator(allocator, sep, list, false) catch nixPanic("out of memory");
+    return concatWithSeparator(allocator, sep, list, false) catch @panic("out of memory");
 }
 
 /// concatStrings ["foo" "bar"]
@@ -180,10 +179,10 @@ export fn concatStrings(arg: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const list = arg.getList(allocator) catch nixPanic("Expected a list of strings");
+    const list = arg.getList(allocator) catch @panic("Expected a list of strings");
     validateStringList(list);
 
-    return concatWithSeparator(allocator, "", list, false) catch nixPanic("out of memory");
+    return concatWithSeparator(allocator, "", list, false) catch @panic("out of memory");
 }
 
 /// join { sep = ", "; list = ["foo" "bar"]; }
@@ -199,10 +198,10 @@ export fn concatLines(arg: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const list = arg.getList(allocator) catch nixPanic("failed to get list");
+    const list = arg.getList(allocator) catch @panic("failed to get list");
     validateStringList(list);
 
-    return concatWithSeparator(allocator, "\n", list, true) catch nixPanic("out of memory");
+    return concatWithSeparator(allocator, "\n", list, true) catch @panic("out of memory");
 }
 
 /// replaceStrings { from = ["Hello" "world"]; to = ["Goodbye" "Nix"]; s = "Hello, world!"; }
@@ -212,16 +211,16 @@ export fn replaceStrings(args: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const from_val = args.getAttr("from") orelse nixPanic("missing 'from' argument");
-    const from = from_val.getList(allocator) catch nixPanic("failed to get from list");
+    const from_val = args.getAttr("from") orelse @panic("missing 'from' argument");
+    const from = from_val.getList(allocator) catch @panic("failed to get from list");
 
-    const to_val = args.getAttr("to") orelse nixPanic("missing 'to' argument");
-    const to = to_val.getList(allocator) catch nixPanic("failed to get to list");
+    const to_val = args.getAttr("to") orelse @panic("missing 'to' argument");
+    const to = to_val.getList(allocator) catch @panic("failed to get to list");
 
-    const s_val = args.getAttr("s") orelse nixPanic("missing 's' argument");
-    const input = s_val.getString(allocator) catch nixPanic("failed to get input string");
+    const s_val = args.getAttr("s") orelse @panic("missing 's' argument");
+    const input = s_val.getString(allocator) catch @panic("failed to get input string");
 
-    return replaceStringsImpl(allocator, input, from, to) catch nixPanic("out of memory");
+    return replaceStringsImpl(allocator, input, from, to) catch @panic("out of memory");
 }
 
 /// intersperse { sep = "/"; list = ["usr" "local" "bin"]; }
@@ -231,11 +230,11 @@ export fn intersperse(args: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const sep_val = args.getAttr("sep") orelse nixPanic("missing 'sep' argument");
-    const sep = sep_val.getString(allocator) catch nixPanic("failed to get sep string");
+    const sep_val = args.getAttr("sep") orelse @panic("missing 'sep' argument");
+    const sep = sep_val.getString(allocator) catch @panic("failed to get sep string");
 
-    const list_val = args.getAttr("list") orelse nixPanic("missing 'list' argument");
-    const strings = list_val.getList(allocator) catch nixPanic("failed to get list");
+    const list_val = args.getAttr("list") orelse @panic("missing 'list' argument");
+    const strings = list_val.getList(allocator) catch @panic("failed to get list");
 
     validateStringList(strings);
 
@@ -244,7 +243,7 @@ export fn intersperse(args: Value) Value {
     }
 
     const result_len = strings.len * 2 - 1;
-    const result = allocator.alloc(Value, result_len) catch nixPanic("out of memory");
+    const result = allocator.alloc(Value, result_len) catch @panic("out of memory");
 
     const sep_value = Value.makeString(sep);
 
@@ -266,18 +265,18 @@ export fn replicate(args: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const n_val = args.getAttr("n") orelse nixPanic("missing 'n' argument");
+    const n_val = args.getAttr("n") orelse @panic("missing 'n' argument");
     const n = n_val.getInt();
 
     if (n < 0) {
-        nixPanic("'n' must be a non-negative integer");
+        @panic("'n' must be a non-negative integer");
     }
 
-    const s_val = args.getAttr("s") orelse nixPanic("missing 's' argument");
-    const s = s_val.getString(allocator) catch nixPanic("failed to get string");
+    const s_val = args.getAttr("s") orelse @panic("missing 's' argument");
+    const s = s_val.getString(allocator) catch @panic("failed to get string");
 
     const count: usize = @intCast(n);
-    const result = allocator.alloc(u8, s.len * count) catch nixPanic("out of memory");
+    const result = allocator.alloc(u8, s.len * count) catch @panic("out of memory");
 
     for (0..count) |i| {
         @memcpy(result[i * s.len ..][0..s.len], s);

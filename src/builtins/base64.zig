@@ -1,9 +1,9 @@
 const std = @import("std");
 const nix_wasm_zig = @import("nix_wasm_zig");
 
-const Value = nix_wasm_zig.Value;
-const nixWarn = nix_wasm_zig.nixWarn;
-const nixPanic = nix_wasm_zig.nixPanic;
+const Nix = nix_wasm_zig.Nix;
+const Value = Nix.Value;
+const warn = nix_wasm_zig.warn;
 const wasm_allocator = std.heap.wasm_allocator;
 
 comptime {
@@ -11,7 +11,7 @@ comptime {
 }
 
 fn init() void {
-    nixWarn("base64 wasm module");
+    warn("base64 wasm module");
 }
 
 export fn base64enc(arg: Value) Value {
@@ -19,10 +19,10 @@ export fn base64enc(arg: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const input = arg.getString(allocator) catch nixPanic("expected a string");
+    const input = arg.getString(allocator) catch @panic("expected a string");
 
     const encoded = std.base64.standard.Encoder.encode(
-        allocator.alloc(u8, std.base64.standard.Encoder.calcSize(input.len)) catch nixPanic("out of memory"),
+        allocator.alloc(u8, std.base64.standard.Encoder.calcSize(input.len)) catch @panic("out of memory"),
         input,
     );
 
@@ -34,12 +34,12 @@ export fn base64dec(arg: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const input = arg.getString(allocator) catch nixPanic("expected a string");
+    const input = arg.getString(allocator) catch @panic("expected a string");
 
-    const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(input) catch nixPanic("invalid base64 input");
-    const buf = allocator.alloc(u8, decoded_len) catch nixPanic("out of memory");
+    const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(input) catch @panic("invalid base64 input");
+    const buf = allocator.alloc(u8, decoded_len) catch @panic("out of memory");
 
-    std.base64.standard.Decoder.decode(buf, input) catch nixPanic("invalid base64 input");
+    std.base64.standard.Decoder.decode(buf, input) catch @panic("invalid base64 input");
 
     return Value.makeString(buf);
 }
