@@ -14,6 +14,8 @@ fn init() void {
     warn("base64 wasm module");
 }
 
+/// base64enc "nix"
+/// => "bml4"
 export fn base64enc(arg: Value) Value {
     var arena = std.heap.ArenaAllocator.init(wasm_allocator);
     defer arena.deinit();
@@ -29,6 +31,8 @@ export fn base64enc(arg: Value) Value {
     return Value.makeString(encoded);
 }
 
+/// base64dec "bml4"
+/// => "nix"
 export fn base64dec(arg: Value) Value {
     var arena = std.heap.ArenaAllocator.init(wasm_allocator);
     defer arena.deinit();
