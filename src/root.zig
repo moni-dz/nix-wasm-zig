@@ -34,20 +34,8 @@ pub fn warn(msg: []const u8) void {
     log_extern.warn(msg.ptr, msg.len);
 }
 
-fn panic_handler(msg: []const u8, ret_addr: ?usize) noreturn {
-    var buf: [4096]u8 = undefined;
-    var fbs = std.io.fixedBufferStream(&buf);
-    const writer = fbs.writer();
-
-    writer.print("{s}\n\nStack trace:\n", .{msg}) catch {};
-
-    var it = std.debug.StackIterator.init(ret_addr orelse @returnAddress(), @frameAddress());
-    while (it.next()) |addr| {
-        writer.print("  0x{x}\n", .{addr}) catch break;
-    }
-
-    const output = fbs.getWritten();
-    log_extern.panic(output.ptr, output.len);
+fn panic_handler(msg: []const u8, _: ?usize) noreturn {
+    log_extern.panic(msg.ptr, msg.len);
 }
 
 pub const panic = std.debug.FullPanic(panic_handler);
