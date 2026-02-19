@@ -1,5 +1,6 @@
 //! Zig implementation for WASM support in Determinate Nix
 //! https://github.com/DeterminateSystems/nix-src/blob/main/doc/manual/source/protocols/wasm.md
+//! https://github.com/DeterminateSystems/nix-src/blob/main/src/libexpr/primops/wasm.cc
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 

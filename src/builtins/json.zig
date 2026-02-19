@@ -85,7 +85,12 @@ fn nixToJson(allocator: std.mem.Allocator, jw: *std.json.Stringify, value: Value
         },
         .Attrs => {
             var attrs = value.getAttrset(allocator);
-            defer attrs.deinit();
+
+            defer {
+                var key_it = attrs.keyIterator();
+                while (key_it.next()) |k| allocator.free(k.*);
+                attrs.deinit();
+            }
 
             try jw.beginObject();
 
