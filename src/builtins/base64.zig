@@ -24,7 +24,7 @@ export fn base64enc(arg: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const input = arg.getString(allocator) catch @panic("expected a string");
+    const input = arg.getString(allocator);
 
     const encoded = std.base64.standard.Encoder.encode(
         allocator.alloc(u8, std.base64.standard.Encoder.calcSize(input.len)) catch @panic("out of memory"),
@@ -41,7 +41,7 @@ export fn base64dec(arg: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const input = arg.getString(allocator) catch @panic("expected a string");
+    const input = arg.getString(allocator);
 
     const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(input) catch @panic("invalid base64 input");
     const buf = allocator.alloc(u8, decoded_len) catch @panic("out of memory");

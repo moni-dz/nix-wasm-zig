@@ -62,17 +62,17 @@ fn nixToJson(allocator: std.mem.Allocator, jw: *std.json.Stringify, value: Value
         .Int => try jw.write(value.getInt()),
         .Float => try jw.write(value.getFloat()),
         .String => {
-            const s = value.getString(allocator) catch @panic("failed to get string");
+            const s = value.getString(allocator);
             defer allocator.free(s);
             try jw.write(s);
         },
         .Path => {
-            const p = value.getPath(allocator) catch @panic("failed to get path");
+            const p = value.getPath(allocator);
             defer allocator.free(p);
             try jw.write(p);
         },
         .List => {
-            const items = value.getList(allocator) catch @panic("failed to get list");
+            const items = value.getList(allocator);
             defer allocator.free(items);
 
             try jw.beginArray();
@@ -84,7 +84,7 @@ fn nixToJson(allocator: std.mem.Allocator, jw: *std.json.Stringify, value: Value
             try jw.endArray();
         },
         .Attrs => {
-            var attrs = value.getAttrset(allocator) catch @panic("failed to get attrset");
+            var attrs = value.getAttrset(allocator);
             defer attrs.deinit();
 
             try jw.beginObject();
@@ -109,7 +109,7 @@ export fn fromJSON(arg: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const json_str = arg.getString(allocator) catch @panic("fromJSON: expected a string");
+    const json_str = arg.getString(allocator);
 
     const parsed = std.json.parseFromSliceLeaky(
         std.json.Value,

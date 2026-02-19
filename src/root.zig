@@ -109,31 +109,20 @@ pub const Nix = struct {
             return make_string(s.ptr, s.len);
         }
 
-        pub fn getString(self: Value, allocator: Allocator) ![]u8 {
+        pub fn getString(self: Value, allocator: Allocator) []u8 {
             var buf: [256]u8 = undefined;
             const len = copy_string(self.id, &buf, buf.len);
 
             if (len > buf.len) {
-                const larger_buf = try allocator.alloc(u8, len);
-                errdefer allocator.free(larger_buf);
+                const larger_buf = allocator.alloc(u8, len) catch @panic("out of memory");
 
                 const len2 = copy_string(self.id, larger_buf.ptr, larger_buf.len);
-                if (len2 != len) {
-                    return error.LengthMismatch;
-                }
-
-                if (!std.unicode.utf8ValidateSlice(larger_buf)) {
-                    return error.InvalidUtf8;
-                }
+                std.debug.assert(len2 == len);
 
                 return larger_buf;
             } else {
-                const result = try allocator.alloc(u8, len);
+                const result = allocator.alloc(u8, len) catch @panic("out of memory");
                 @memcpy(result, buf[0..len]);
-
-                if (!std.unicode.utf8ValidateSlice(result)) {
-                    return error.InvalidUtf8;
-                }
 
                 return result;
             }
@@ -143,32 +132,20 @@ pub const Nix = struct {
             return make_path(self.id, rel.ptr, rel.len);
         }
 
-        pub fn getPath(self: Value, allocator: Allocator) ![]u8 {
+        pub fn getPath(self: Value, allocator: Allocator) []u8 {
             var buf: [256]u8 = undefined;
             const len = copy_path(self.id, &buf, buf.len);
 
             if (len > buf.len) {
-                const larger_buf = try allocator.alloc(u8, len);
-                errdefer allocator.free(larger_buf);
+                const larger_buf = allocator.alloc(u8, len) catch @panic("out of memory");
 
                 const len2 = copy_path(self.id, larger_buf.ptr, larger_buf.len);
-
-                if (len2 != len) {
-                    return error.LengthMismatch;
-                }
-
-                if (!std.unicode.utf8ValidateSlice(larger_buf)) {
-                    return error.InvalidUtf8;
-                }
+                std.debug.assert(len2 == len);
 
                 return larger_buf;
             } else {
-                const result = try allocator.alloc(u8, len);
+                const result = allocator.alloc(u8, len) catch @panic("out of memory");
                 @memcpy(result, buf[0..len]);
-
-                if (!std.unicode.utf8ValidateSlice(result)) {
-                    return error.InvalidUtf8;
-                }
 
                 return result;
             }
@@ -190,23 +167,19 @@ pub const Nix = struct {
             return make_list(list.ptr, list.len);
         }
 
-        pub fn getList(self: Value, allocator: Allocator) ![]Value {
+        pub fn getList(self: Value, allocator: Allocator) []Value {
             var buf: [64]Value = undefined;
             const len = copy_list(self.id, &buf, buf.len);
 
             if (len > buf.len) {
-                const larger_buf = try allocator.alloc(Value, len);
-                errdefer allocator.free(larger_buf);
+                const larger_buf = allocator.alloc(Value, len) catch @panic("out of memory");
 
                 const len2 = copy_list(self.id, larger_buf.ptr, larger_buf.len);
-
-                if (len2 != len) {
-                    return error.LengthMismatch;
-                }
+                std.debug.assert(len2 == len);
 
                 return larger_buf;
             } else {
-                const result = try allocator.alloc(Value, len);
+                const result = allocator.alloc(Value, len) catch @panic("out of memory");
                 @memcpy(result, buf[0..len]);
                 return result;
             }
@@ -227,34 +200,24 @@ pub const Nix = struct {
             return make_attrset(pairs.ptr, pairs.len);
         }
 
-        pub fn getAttrset(self: Value, allocator: Allocator) !std.StringHashMap(Value) {
+        pub fn getAttrset(self: Value, allocator: Allocator) std.StringHashMap(Value) {
             var buf: [32]Attr.Output = undefined;
             const len = copy_attrset(self.id, &buf, buf.len);
 
             const attrs_buf: []Attr.Output = if (len > buf.len) blk: {
-                const larger_buf = try allocator.alloc(Attr.Output, len);
-                errdefer allocator.free(larger_buf);
-
+                const larger_buf = allocator.alloc(Attr.Output, len) catch @panic("out of memory");
                 const len2 = copy_attrset(self.id, larger_buf.ptr, larger_buf.len);
-
-                if (len2 != len) {
-                    return error.LengthMismatch;
-                }
-
+                std.debug.assert(len2 == len);
                 break :blk larger_buf;
             } else buf[0..len];
 
             defer if (len > buf.len) allocator.free(attrs_buf);
 
             var result = std.StringHashMap(Value).init(allocator);
-            errdefer result.deinit();
-
             for (attrs_buf, 0..) |entry, attr_idx| {
-                const name_buf = try allocator.alloc(u8, entry.name_len);
-
+                const name_buf = allocator.alloc(u8, entry.name_len) catch @panic("out of memory");
                 copy_attrname(self.id, attr_idx, name_buf.ptr, entry.name_len);
-
-                try result.put(name_buf, .{ .id = entry.value_id });
+                result.put(name_buf, .{ .id = entry.value_id }) catch @panic("out of memory");
             }
 
             return result;
@@ -278,23 +241,19 @@ pub const Nix = struct {
             return make_app(self.id, args.ptr, args.len);
         }
 
-        pub fn readFile(self: Value, allocator: Allocator) ![]u8 {
+        pub fn readFile(self: Value, allocator: Allocator) []u8 {
             var buf: [1024]u8 = undefined;
             const len = read_file(self.id, &buf, buf.len);
 
             if (len > buf.len) {
-                const larger_buf = try allocator.alloc(u8, len);
-                errdefer allocator.free(larger_buf);
+                const larger_buf = allocator.alloc(u8, len) catch @panic("out of memory");
 
                 const len2 = read_file(self.id, larger_buf.ptr, larger_buf.len);
-
-                if (len2 != len) {
-                    return error.LengthMismatch;
-                }
+                std.debug.assert(len2 == len);
 
                 return larger_buf;
             } else {
-                const result = try allocator.alloc(u8, len);
+                const result = allocator.alloc(u8, len) catch @panic("out of memory");
                 @memcpy(result, buf[0..len]);
                 return result;
             }

@@ -36,7 +36,7 @@ fn concatWithSeparator(allocator: std.mem.Allocator, sep: []const u8, strings: [
     }
 
     for (strings, 0..) |s, i| {
-        str_slices[i] = s.getString(allocator) catch @panic("failed to get string");
+        str_slices[i] = s.getString(allocator);
         total_len += str_slices[i].len;
     }
 
@@ -89,7 +89,7 @@ fn replaceStringsImpl(allocator: std.mem.Allocator, input: []const u8, from: []c
     }
 
     for (from, 0..) |v, i| {
-        from_strs[i] = v.getString(allocator) catch @panic("failed to get string");
+        from_strs[i] = v.getString(allocator);
     }
 
     const to_strs = try allocator.alloc([]const u8, to.len);
@@ -100,7 +100,7 @@ fn replaceStringsImpl(allocator: std.mem.Allocator, input: []const u8, from: []c
     }
 
     for (to, 0..) |v, i| {
-        to_strs[i] = v.getString(allocator) catch @panic("failed to get string");
+        to_strs[i] = v.getString(allocator);
     }
 
     var result: std.ArrayListUnmanaged(u8) = .{};
@@ -165,10 +165,10 @@ export fn concatStringsSep(args: Value) Value {
     const allocator = arena.allocator();
 
     const sep_val = args.getAttr("sep") orelse @panic("missing 'sep' argument");
-    const sep = sep_val.getString(allocator) catch @panic("failed to get sep string");
+    const sep = sep_val.getString(allocator);
 
     const list_val = args.getAttr("list") orelse @panic("missing 'list' argument");
-    const list = list_val.getList(allocator) catch @panic("failed to get list");
+    const list = list_val.getList(allocator);
 
     validateStringList(list);
 
@@ -182,7 +182,7 @@ export fn concatStrings(arg: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const list = arg.getList(allocator) catch @panic("Expected a list of strings");
+    const list = arg.getList(allocator);
     validateStringList(list);
 
     return concatWithSeparator(allocator, "", list, false) catch @panic("out of memory");
@@ -201,7 +201,7 @@ export fn concatLines(arg: Value) Value {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const list = arg.getList(allocator) catch @panic("failed to get list");
+    const list = arg.getList(allocator);
     validateStringList(list);
 
     return concatWithSeparator(allocator, "\n", list, true) catch @panic("out of memory");
@@ -215,13 +215,13 @@ export fn replaceStrings(args: Value) Value {
     const allocator = arena.allocator();
 
     const from_val = args.getAttr("from") orelse @panic("missing 'from' argument");
-    const from = from_val.getList(allocator) catch @panic("failed to get from list");
+    const from = from_val.getList(allocator);
 
     const to_val = args.getAttr("to") orelse @panic("missing 'to' argument");
-    const to = to_val.getList(allocator) catch @panic("failed to get to list");
+    const to = to_val.getList(allocator);
 
     const s_val = args.getAttr("s") orelse @panic("missing 's' argument");
-    const input = s_val.getString(allocator) catch @panic("failed to get input string");
+    const input = s_val.getString(allocator);
 
     return replaceStringsImpl(allocator, input, from, to) catch @panic("out of memory");
 }
@@ -234,10 +234,10 @@ export fn intersperse(args: Value) Value {
     const allocator = arena.allocator();
 
     const sep_val = args.getAttr("sep") orelse @panic("missing 'sep' argument");
-    const sep = sep_val.getString(allocator) catch @panic("failed to get sep string");
+    const sep = sep_val.getString(allocator);
 
     const list_val = args.getAttr("list") orelse @panic("missing 'list' argument");
-    const strings = list_val.getList(allocator) catch @panic("failed to get list");
+    const strings = list_val.getList(allocator);
 
     validateStringList(strings);
 
@@ -276,7 +276,7 @@ export fn replicate(args: Value) Value {
     }
 
     const s_val = args.getAttr("s") orelse @panic("missing 's' argument");
-    const s = s_val.getString(allocator) catch @panic("failed to get string");
+    const s = s_val.getString(allocator);
 
     const count: usize = @intCast(n);
     const result = allocator.alloc(u8, s.len * count) catch @panic("out of memory");
