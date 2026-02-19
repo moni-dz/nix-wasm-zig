@@ -3,9 +3,11 @@ const nix_wasm_zig = @import("nix_wasm_zig");
 
 const Nix = nix_wasm_zig.Nix;
 const Value = Nix.Value;
-const warn = nix_wasm_zig.warn;
-const wasm_allocator = std.heap.wasm_allocator;
+
 pub const panic = nix_wasm_zig.panic;
+const warn = nix_wasm_zig.warn;
+
+const wasm_allocator = std.heap.wasm_allocator;
 
 comptime {
     nix_wasm_zig.entrypoint(init);
