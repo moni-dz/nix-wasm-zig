@@ -20,7 +20,7 @@ pub fn build(b: *std.Build) !void {
 
     for (subdirs) |subdir| {
         const nix_wasm_zig = b.createModule(.{
-            .root_source_file = b.path("src/root.zig"),
+            .root_source_file = b.path("src/nix-wasm-zig.zig"),
             .target = subdir.target,
             .optimize = optimize,
         });

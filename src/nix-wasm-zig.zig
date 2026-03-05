@@ -1,5 +1,7 @@
 //! Zig implementation for WASM support in Determinate Nix
+//!
 //! https://github.com/DeterminateSystems/nix-src/blob/main/doc/manual/source/protocols/wasm.md
+//!
 //! https://github.com/DeterminateSystems/nix-src/blob/main/src/libexpr/primops/wasm.cc
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -32,6 +34,7 @@ extern fn make_app(fun: Nix.Value.Id, ptr: [*]const Nix.Value, len: usize) Nix.V
 extern fn read_file(value: Nix.Value.Id, ptr: [*]u8, max_len: usize) usize;
 extern fn return_to_nix(value: Nix.Value.Id) noreturn;
 
+/// display a warning from Nix
 pub fn warn(msg: []const u8) void {
     log_extern.warn(msg.ptr, msg.len);
 }
@@ -42,6 +45,7 @@ fn panic_handler(msg: []const u8, _: ?usize) noreturn {
 
 pub const panic = std.debug.FullPanic(panic_handler);
 
+/// exports `nix_wasm_init_v1()` with an option for custom per-builtin code
 pub fn entrypoint(comptime moduleInit: ?fn () void) void {
     @export(&struct {
         fn nix_wasm_init_v1() callconv(.c) void {
@@ -87,20 +91,22 @@ pub const Nix = struct {
 
         id: Id,
 
-        pub fn getWasiArg(allocator: Allocator) Value {
-            var args = std.process.argsWithAllocator(allocator) catch @panic("failed to get args");
+        /// Retrieve the passed argument in WASI mode.
+        pub fn getWasiArg() !Value {
+            var args = try std.process.argsWithAllocator(std.heap.wasm_allocator);
             defer args.deinit();
 
             _ = args.next(); // this always contains the string "wasi"
 
             // args[1] contains the value id of the arg
-            const argIdZ = args.next() orelse @panic("no argument provided");
-
-            const id = std.fmt.parseUnsigned(u32, std.mem.span(argIdZ.ptr), 10) catch @panic("argument is not a value id");
-
-            return .{ .id = id };
+            if (args.next()) |*idZ| {
+                return .{ .id = try std.fmt.parseUnsigned(u32, std.mem.span(idZ.ptr), 10) };
+            } else {
+                return error.NoArgumentProvided;
+            }
         }
 
+        /// See [`nix-wasm-zig.Nix.Type`](#nix-wasm-zig.Nix.Type).
         pub fn getType(self: Value) Type {
             return get_type(self.id);
         }
@@ -125,6 +131,7 @@ pub const Nix = struct {
             return make_string(s.ptr, s.len);
         }
 
+        /// Caller owns the returned slice.
         pub fn getString(self: Value, allocator: Allocator) []u8 {
             return copyWithFallback(u8, 256, allocator, copy_string, self.id);
         }
@@ -133,6 +140,7 @@ pub const Nix = struct {
             return make_path(self.id, rel.ptr, rel.len);
         }
 
+        /// Caller owns the returned slice.
         pub fn getPath(self: Value, allocator: Allocator) []u8 {
             return copyWithFallback(u8, 256, allocator, copy_path, self.id);
         }
@@ -153,6 +161,7 @@ pub const Nix = struct {
             return make_list(list.ptr, list.len);
         }
 
+        /// Caller owns the returned slice.
         pub fn getList(self: Value, allocator: Allocator) []Value {
             return copyWithFallback(Value, 64, allocator, copy_list, self.id);
         }
@@ -174,6 +183,7 @@ pub const Nix = struct {
             return make_attrset(pairs.ptr, pairs.len);
         }
 
+        /// Caller owns the returned map.
         pub fn getAttrset(self: Value, allocator: Allocator) std.StringHashMap(Value) {
             var buf: [32]Attr.Output = undefined;
             const len = copy_attrset(self.id, &buf, buf.len);
@@ -215,6 +225,7 @@ pub const Nix = struct {
             return make_app(self.id, args.ptr, args.len);
         }
 
+        /// Caller owns the returned slice.
         pub fn readFile(self: Value, allocator: Allocator) []u8 {
             return copyWithFallback(u8, 1024, allocator, read_file, self.id);
         }

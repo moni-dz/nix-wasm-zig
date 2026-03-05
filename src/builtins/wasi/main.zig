@@ -10,7 +10,7 @@ pub fn main() !noreturn {
     defer arena.deinit();
 
     const allocator = arena.allocator();
-    const arg = Value.getWasiArg(allocator);
+    const arg = try Value.getWasiArg();
 
     std.debug.print("Hello, {s}!\n", .{arg.getString(allocator)});
 
