@@ -30,6 +30,7 @@ extern fn get_attr(value: Nix.Value.Id, ptr: [*]const u8, len: usize) Nix.Value.
 extern fn call_function(fun: Nix.Value.Id, ptr: [*]const Nix.Value, len: usize) Nix.Value;
 extern fn make_app(fun: Nix.Value.Id, ptr: [*]const Nix.Value, len: usize) Nix.Value;
 extern fn read_file(value: Nix.Value.Id, ptr: [*]u8, max_len: usize) usize;
+extern fn return_to_nix(value: Nix.Value.Id) noreturn;
 
 pub fn warn(msg: []const u8) void {
     log_extern.warn(msg.ptr, msg.len);
@@ -85,6 +86,20 @@ pub const Nix = struct {
         pub const Id = u32;
 
         id: Id,
+
+        pub fn getWasiArg(allocator: Allocator) Value {
+            var args = std.process.argsWithAllocator(allocator) catch @panic("failed to get args");
+            defer args.deinit();
+
+            _ = args.next(); // this always contains the string "wasi"
+
+            // args[1] contains the value id of the arg
+            const argIdZ = args.next() orelse @panic("no argument provided");
+
+            const id = std.fmt.parseUnsigned(u32, std.mem.span(argIdZ.ptr), 10) catch @panic("argument is not a value id");
+
+            return .{ .id = id };
+        }
 
         pub fn getType(self: Value) Type {
             return get_type(self.id);
@@ -258,6 +273,10 @@ pub const Nix = struct {
                 @memcpy(result, buf[0..len]);
                 return result;
             }
+        }
+
+        pub fn returnToNix(self: Value) noreturn {
+            return_to_nix(self.id);
         }
     };
 };

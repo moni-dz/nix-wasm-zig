@@ -7,8 +7,14 @@ See `src/builtins/minimal.zig` for a minimal template.
 Each builtin module is invoked via the `builtins.wasm` Nix primitive (requires wasm-builtins experimental feature):
 
 ```nix
-builtins.wasm ./zig-out/bin/minimal.wasm "example" "Hello, World!"
+# freestanding builtins (non-wasi mode)
+builtins.wasm { path = ./zig-out/bin/non-wasi-minimal.wasm; function = "example"; } "Hello, World!"
 # => "Hello, World!"
+
+# wasip1 builtins (wasi mode)
+builtins.wasm { path = ./zig-out/bin/wasi-minimal.wasm; } null # or any argument, returns null anyway...
+# warning: 'wasi-minimal.wasm': Hello, world!
+# => null
 ```
 
 ## Requirements
@@ -18,5 +24,5 @@ builtins.wasm ./zig-out/bin/minimal.wasm "example" "Hello, World!"
 
 ```sh
 nix develop # development
-nix build # outputs wasm file under result/bin
+nix build # outputs wasm files under result/bin
 ```

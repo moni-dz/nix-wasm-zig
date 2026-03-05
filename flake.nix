@@ -21,8 +21,8 @@
     });
 
   in {
-    
-    packages = forAllSystems ({ pkgs, system, lib, ... }: rec {
+
+    packages = forAllSystems ({ pkgs, system, ... }: rec {
       default = nix-wasm-zig-plugins;
 
       nix-wasm-zig-plugins = pkgs.stdenv.mkDerivation {
@@ -48,13 +48,14 @@
       };
     });
 
-    devShells = forAllSystems ({ pkgs, system, lib, ... }: {
+    devShells = forAllSystems ({ pkgs, system, ... }: {
       default = pkgs.mkShell {
         packages = __attrValues {
-          zig = inputs.zig.packages.x86_64-linux."0.15.2";
+          zig = inputs.zig.packages.${system}."0.15.2";
           inherit (pkgs) zls wabt binaryen;
-          inherit (inputs.nix.packages.x86_64-linux) nix-cli;
+          inherit (inputs.nix.packages.${system}) nix-cli;
 
+          /*
           zigdoc = pkgs.stdenv.mkDerivation (final: {
             pname = "zigdoc";
             version = "0.2.2";
@@ -68,6 +69,7 @@
 
             nativeBuildInputs = [ pkgs.zig ];
           });
+          */
         };
       };
     });
