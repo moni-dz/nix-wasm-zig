@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
     const freestanding_target = b.resolveTargetQuery(.{
@@ -28,11 +28,17 @@ pub fn build(b: *std.Build) void {
         const builtins_dir = b.build_root.handle.openDir(
             b.fmt("src/builtins/{s}", .{subdir.dir}),
             .{ .iterate = true },
-        ) catch @panic(b.fmt("failed to open src/builtins/{s}", .{subdir.dir}));
+        ) catch |err| {
+            std.log.err("failed to open src/builtins/{s}: {}", .{ subdir.dir, err });
+            return error.BuildFailed;
+        };
 
         var iter = builtins_dir.iterate();
 
-        while (iter.next() catch @panic("failed to iterate")) |entry| {
+        while (iter.next() catch |err| {
+            std.log.err("failed to iterate src/builtins/{s}: {}", .{ subdir.dir, err });
+            return error.BuildFailed;
+        }) |entry| {
             if (entry.kind != .file or !std.mem.endsWith(u8, entry.name, ".zig"))
                 continue;
 

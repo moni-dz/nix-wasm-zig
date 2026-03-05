@@ -126,22 +126,7 @@ pub const Nix = struct {
         }
 
         pub fn getString(self: Value, allocator: Allocator) []u8 {
-            var buf: [256]u8 = undefined;
-            const len = copy_string(self.id, &buf, buf.len);
-
-            if (len > buf.len) {
-                const larger_buf = allocator.alloc(u8, len) catch @panic("out of memory");
-
-                const len2 = copy_string(self.id, larger_buf.ptr, larger_buf.len);
-                std.debug.assert(len2 == len);
-
-                return larger_buf;
-            } else {
-                const result = allocator.alloc(u8, len) catch @panic("out of memory");
-                @memcpy(result, buf[0..len]);
-
-                return result;
-            }
+            return copyWithFallback(u8, 256, allocator, copy_string, self.id);
         }
 
         pub fn makePath(self: Value, rel: []const u8) Value {
@@ -149,22 +134,7 @@ pub const Nix = struct {
         }
 
         pub fn getPath(self: Value, allocator: Allocator) []u8 {
-            var buf: [256]u8 = undefined;
-            const len = copy_path(self.id, &buf, buf.len);
-
-            if (len > buf.len) {
-                const larger_buf = allocator.alloc(u8, len) catch @panic("out of memory");
-
-                const len2 = copy_path(self.id, larger_buf.ptr, larger_buf.len);
-                std.debug.assert(len2 == len);
-
-                return larger_buf;
-            } else {
-                const result = allocator.alloc(u8, len) catch @panic("out of memory");
-                @memcpy(result, buf[0..len]);
-
-                return result;
-            }
+            return copyWithFallback(u8, 256, allocator, copy_path, self.id);
         }
 
         pub fn makeBool(b: bool) Value {
@@ -184,30 +154,18 @@ pub const Nix = struct {
         }
 
         pub fn getList(self: Value, allocator: Allocator) []Value {
-            var buf: [64]Value = undefined;
-            const len = copy_list(self.id, &buf, buf.len);
-
-            if (len > buf.len) {
-                const larger_buf = allocator.alloc(Value, len) catch @panic("out of memory");
-
-                const len2 = copy_list(self.id, larger_buf.ptr, larger_buf.len);
-                std.debug.assert(len2 == len);
-
-                return larger_buf;
-            } else {
-                const result = allocator.alloc(Value, len) catch @panic("out of memory");
-                @memcpy(result, buf[0..len]);
-                return result;
-            }
+            return copyWithFallback(Value, 64, allocator, copy_list, self.id);
         }
 
         pub fn makeAttrset(allocator: Allocator, attrs: []const Attr.Entry) Value {
+            comptime std.debug.assert(@sizeOf(usize) <= @sizeOf(u32));
+
             const pairs = allocator.alloc(Attr.Input, attrs.len) catch @panic("out of memory");
             defer allocator.free(pairs);
 
             for (attrs, 0..) |attr, i| {
                 pairs[i] = .{
-                    .name_ptr = @intCast(@intFromPtr(attr.name.ptr)),
+                    .name_ptr = @intFromPtr(attr.name.ptr),
                     .name_len = @intCast(attr.name.len),
                     .value_id = attr.value.id,
                 };
@@ -258,21 +216,7 @@ pub const Nix = struct {
         }
 
         pub fn readFile(self: Value, allocator: Allocator) []u8 {
-            var buf: [1024]u8 = undefined;
-            const len = read_file(self.id, &buf, buf.len);
-
-            if (len > buf.len) {
-                const larger_buf = allocator.alloc(u8, len) catch @panic("out of memory");
-
-                const len2 = read_file(self.id, larger_buf.ptr, larger_buf.len);
-                std.debug.assert(len2 == len);
-
-                return larger_buf;
-            } else {
-                const result = allocator.alloc(u8, len) catch @panic("out of memory");
-                @memcpy(result, buf[0..len]);
-                return result;
-            }
+            return copyWithFallback(u8, 1024, allocator, read_file, self.id);
         }
 
         pub fn returnToNix(self: Value) noreturn {
@@ -280,3 +224,25 @@ pub const Nix = struct {
         }
     };
 };
+
+fn copyWithFallback(
+    comptime T: type,
+    comptime stack_size: usize,
+    allocator: Allocator,
+    comptime copyFn: *const fn (Nix.Value.Id, [*]T, usize) callconv(.c) usize,
+    id: Nix.Value.Id,
+) []T {
+    var buf: [stack_size]T = undefined;
+    const len = copyFn(id, &buf, buf.len);
+
+    if (len > buf.len) {
+        const larger_buf = allocator.alloc(T, len) catch @panic("out of memory");
+        const len2 = copyFn(id, larger_buf.ptr, larger_buf.len);
+        std.debug.assert(len2 == len);
+        return larger_buf;
+    } else {
+        const result = allocator.alloc(T, len) catch @panic("out of memory");
+        @memcpy(result, buf[0..len]);
+        return result;
+    }
+}
