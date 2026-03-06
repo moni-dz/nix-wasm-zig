@@ -22,29 +22,26 @@
 
   in {
 
-    packages = forAllSystems ({ pkgs, system, ... }: rec {
+    packages = forAllSystems ({ pkgs, lib, ... }: rec {
       default = nix-wasm-zig-plugins;
 
       nix-wasm-zig-plugins = pkgs.stdenv.mkDerivation {
         pname = "nix-wasm-zig-plugins";
         version = "0.1.0";
 
-        src = ./.;
+        src = lib.fileset.toSource {
+          root = ./.;
+          fileset = lib.fileset.fileFilter (f: f.hasExt "zig" || f.hasExt "zon") ./.;
+        };
 
         nativeBuildInputs = [
-          inputs.zig.packages.${system}."0.15.2"
+          pkgs.zig
           pkgs.binaryen
         ];
 
-        dontConfigure = true;
-        dontInstall = true;
+        dontSetZigDefaultFlags = true;
 
-        buildPhase = ''
-          runHook preBuild
-          export ZIG_GLOBAL_CACHE_DIR=$(mktemp -d)
-          zig build -Doptimize=ReleaseFast --prefix $out
-          runHook postBuild
-        '';
+        zigBuildFlags = [ "-Doptimize=ReleaseFast" ];
       };
     });
 
@@ -55,7 +52,7 @@
           inherit (pkgs) zls wabt binaryen;
           inherit (inputs.nix.packages.${system}) nix-cli;
 
-          /*
+
           zigdoc = pkgs.stdenv.mkDerivation (final: {
             pname = "zigdoc";
             version = "0.2.2";
@@ -68,8 +65,12 @@
             };
 
             nativeBuildInputs = [ pkgs.zig ];
+
+            postPatch = ''
+              substituteInPlace build.zig \
+                --replace-fail '"../README.md"' '"README.md"'
+            '';
           });
-          */
         };
       };
     });
